@@ -21,9 +21,8 @@ unordered_unique(Iterator first, Iterator last,
     using index_map = robin_hood::unordered_map<T, std::size_t>;
     using map_iter = typename index_map::iterator;
     using map_value = typename index_map::value_type;
-    for (std::vector<std::size_t> *arg: {count})
-        if (arg)
-            arg->clear();
+    if(count)
+        count->clear();
     std::vector<T> uvals;
     index_map map;
     std::size_t cur_idx = 0;
