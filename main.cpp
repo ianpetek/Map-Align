@@ -12,34 +12,6 @@
 // Faster replacement for std::unordered_map used for extracting unique values
 #include "robin_hood.h"
 
-using namespace std::chrono;
-
-template<class T, class Iterator>
-std::vector<T>
-unordered_unique(Iterator first, Iterator last,
-                 std::vector<std::size_t> *count = nullptr) {
-    using index_map = robin_hood::unordered_map<T, std::size_t>;
-    using map_iter = typename index_map::iterator;
-    using map_value = typename index_map::value_type;
-    if(count)
-        count->clear();
-    std::vector<T> uvals;
-    index_map map;
-    std::size_t cur_idx = 0;
-    for (Iterator i = first; i != last; ++cur_idx, ++i) {
-        const std::pair<map_iter, bool> inserted =
-                map.emplace(*i, uvals.size());
-        map_value &ival = *inserted.first;
-        if (inserted.second) {
-            uvals.push_back(ival.first);
-            if (count)
-                count->push_back(1);
-        } else if (count)
-            (*count)[ival.second] += 1;
-    }
-    return uvals;
-}
-
 double degToRad(double deg) {
     return deg * (M_PI / 180);
 }
@@ -96,11 +68,12 @@ HoughLinesReturn HoughLines(const cv::Mat &img, double angle_step = 0.1) {
     Eigen::MatrixXd accumulator = Eigen::MatrixXd::Zero(2 * img_diag, thetas_size);
     for (int i = 0; i < thetas_size; i++) {
         const auto &curr_rho_col = rhosmat.col(i);
-        std::vector<std::size_t> counts;
-        std::vector<int> unique_rhos = unordered_unique<int>(curr_rho_col.data(),
-                                                             curr_rho_col.data() + curr_rho_col.size(), &counts);
-        for (int j = 0; j < unique_rhos.size(); j++)
-            accumulator(unique_rhos[j], i) = counts[j];
+        robin_hood::unordered_map<int, int> unique_rhos;
+        for (int j = 0; j < curr_rho_col.size(); j++)
+            unique_rhos[curr_rho_col(j)]++;
+
+        for (auto &[unique_rho, count]: unique_rhos)
+            accumulator(unique_rho, i) = count;
     }
 
     return {accumulator, rhos, thetas};
