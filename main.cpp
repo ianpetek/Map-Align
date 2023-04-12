@@ -35,18 +35,15 @@ struct HoughLinesReturn {
 
 HoughLinesReturn HoughLines(const cv::Mat &img, double angle_step = 0.1) {
 
-    int thetas_size = (int) round(M_PI / degToRad(angle_step));
+    int thetas_size = round(M_PI / degToRad(angle_step));
     int width = img.size().width;
     int height = img.size().height;
-    int img_diag = (int) round(sqrt(width * width + height * height));
+    int img_diag = round(sqrt(width * width + height * height));
 
     Eigen::ArrayXd thetas = Eigen::ArrayXd::LinSpaced(thetas_size, -M_PI_2, M_PI_2);
     Eigen::ArrayXd rhos = Eigen::ArrayXd::LinSpaced(img_diag * 2, -img_diag, img_diag);
     Eigen::MatrixXd mat_eigen;
     cv::cv2eigen(img, mat_eigen);
-
-    Eigen::VectorXd sin_thetas = thetas.sin();
-    Eigen::VectorXd cos_thetas = thetas.cos();
 
     std::vector<double> edge_x;
     std::vector<double> edge_y;
@@ -61,8 +58,8 @@ HoughLinesReturn HoughLines(const cv::Mat &img, double angle_step = 0.1) {
     Eigen::VectorXd idxs_y = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(edge_y.data(), edge_y.size());
 
     // rho = x * Cos(theta) + y * Sin(Theta)
-    Eigen::MatrixXd x_CosTheta = idxs_x * cos_thetas.transpose();
-    Eigen::MatrixXd y_SinTheta = idxs_y * sin_thetas.transpose();
+    Eigen::MatrixXd x_CosTheta = idxs_x * thetas.cos().matrix().transpose();
+    Eigen::MatrixXd y_SinTheta = idxs_y * thetas.sin().matrix().transpose();
     Eigen::MatrixXi rhosmat = ((x_CosTheta + y_SinTheta).array().round() + img_diag).cast<int>();
 
     Eigen::MatrixXd accumulator = Eigen::MatrixXd::Zero(2 * img_diag, thetas_size);
@@ -99,8 +96,8 @@ int main(int argc, char **argv) {
     // Run edge detection
     cv::Mat dst = EdgeDetect(src, 230, 250, 3);
 
+    constexpr int INITIAL_ROTATION = -10;
     // Rotate image by a small angle for more accuracy when running Hough
-    int INITIAL_ROTATION = -10;
     cv::Point2f pc(dst.cols / 2., dst.rows / 2.);
     cv::Mat r = cv::getRotationMatrix2D(pc, INITIAL_ROTATION, 1.0);
     cv::warpAffine(dst, dst, r, src.size());
